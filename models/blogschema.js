@@ -1,6 +1,6 @@
 const {Schema, model} = require('mongoose');
 
-// Blog schema stores post content, cover image path, and author reference.
+// Blog schema stores post content, cover image data, and author reference.
 const blogSchema = new Schema({
     title:{
         type:String,
@@ -10,9 +10,9 @@ const blogSchema = new Schema({
         type:String,
         required:true
     },
-    coverImgUrl:{
-        type:String,
-        required:false,
+    coverImage:{
+        data: Buffer,
+        contentType: String,
     },
     // Each liked user is stored once, so the app can show active likes and unlike.
     likes:[{

@@ -5,21 +5,30 @@ const commentModel = require('../models/commentsmodel');
 
 const router = Router();
 const multer = require('multer');
-const path = require('path');
+const mongoose = require('mongoose');
 
-// Store uploaded cover images inside public/uploads.
-const diskstorage = multer.diskStorage({
-    destination: function(req,file,cb){
-        cb(null, path.resolve(`./public/uploads`));
+// Keep cover image uploads in memory so they can be saved directly to MongoDB.
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024,
     },
-    // Add a timestamp so uploaded files do not overwrite each other.
-    filename: function(req,file,cb){
-        const filename = `${Date.now()}-${file.originalname}`;
-        cb(null, filename);
+    fileFilter: function(req, file, cb){
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Only image files are allowed'));
+        }
+        cb(null, true);
     }
-})
+});
 
-const upload = multer({ storage: diskstorage });
+function uploadCoverImage(req, res, next){
+    upload.single('coverImage')(req, res, function(err){
+        if (err) {
+            return res.status(400).send(err.message);
+        }
+        next();
+    });
+}
 
 // Show the form for creating a new blog post.
 router.get('/addblog', (req,res) => {
@@ -29,31 +38,68 @@ router.get('/addblog', (req,res) => {
 });
 
 // Save the submitted blog and optional cover image.
-router.post('/', upload.single('coverImage'), async (req,res)=>{
-    const {title, body}  = req.body;
+router.post('/', uploadCoverImage, async (req,res)=>{
+    try {
+        if (!req.user) {
+            return res.redirect('/user/signin');
+        }
 
-    if (!title || !body || !req.file) {
-        return res.render('addblog', {
-        user: req.user,
-        error: 'All fields are required',
+        const {title, body}  = req.body;
+
+        if (!title || !body || !req.file) {
+            return res.render('addblog', {
+            user: req.user,
+            error: 'All fields are required',
+            });
+        }
+
+        const Blog = await blog.create({
+            title,
+            body,
+            coverImage: {
+                data: req.file.buffer,
+                contentType: req.file.mimetype,
+            },
+            createdBy: req.user._id,
         });
+        return res.redirect(`/blog/${Blog._id}`);
+    } catch (err) {
+        console.error('Create blog error:', err);
+        return res.status(500).send('Unable to create blog');
     }
-
-    const Blog = await blog.create({
-        title,
-        body,
-        coverImgUrl: req.file ? `/uploads/${req.file.filename}` : null,
-        createdBy: req.user._id,
-    })
-    return res.redirect(`/blog/${Blog._id}`);
 })
 
 router.get('/myblogs', async(req,res) => {
-    const blogs = await blog.find({createdBy: req.user._id});
+    const blogs = await blog.find({createdBy: req.user._id}).select('-coverImage.data');
     return res.render('myblogs', {
         user: req.user,
         blogs: blogs
     });
+})
+
+// Serve a blog cover image from MongoDB instead of Render's temporary filesystem.
+router.get('/image/:id', async (req,res) =>{
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).send('Invalid blog id');
+        }
+
+        const Blog = await blog.findById(req.params.id).select('coverImage');
+
+        if(!Blog){
+            return res.status(404).send('Blog not found');
+        }
+
+        if(!Blog.coverImage || !Blog.coverImage.data || Blog.coverImage.data.length === 0){
+            return res.status(404).send('Image not found');
+        }
+
+        res.set('Content-Type', Blog.coverImage.contentType || 'application/octet-stream');
+        return res.send(Blog.coverImage.data);
+    } catch (err) {
+        console.error('Blog image error:', err);
+        return res.status(500).send('Unable to load image');
+    }
 })
 
 // Delete a blog post. Only the author can delete their blog.
@@ -77,7 +123,7 @@ router.post('/:id/delete', async (req,res) =>{
 
 // Show one blog post with its author and comments.
 router.get('/:id', async (req,res) =>{
-    const Blog = await blog.findById(req.params.id).populate('createdBy');
+    const Blog = await blog.findById(req.params.id).select('-coverImage.data').populate('createdBy');
     // Load only comments for this blog and populate each comment's author details.
     const comments = await commentModel.find({blogId: req.params.id}).populate('createdBy');
     if(!Blog){
@@ -107,7 +153,7 @@ router.get('/edit/:id', async(req,res)=>{
     });
 });
 
-router.post('/edit/:id', upload.single('coverImage'), async(req,res)=>{
+router.post('/edit/:id', uploadCoverImage, async(req,res)=>{
     const Blog = await blog.findById(req.params.id);
     if(!Blog){
         return res.status(404).send('Blog not found');
@@ -123,7 +169,10 @@ router.post('/edit/:id', upload.single('coverImage'), async(req,res)=>{
     };
 
     if(req.file){
-        updatedData.coverImgUrl = `/uploads/${req.file.filename}`;
+        updatedData.coverImage = {
+            data: req.file.buffer,
+            contentType: req.file.mimetype,
+        };
     }
 
     await blog.findByIdAndUpdate(req.params.id, updatedData);

@@ -43,7 +43,7 @@ app.set('views', path.resolve("./views"));
 // Home page route shows all blogs from the database.
 app.get('/', async (req,res) => {
     try {
-        const allblogs = await blog.find({});
+        const allblogs = await blog.find({}).select('-coverImage.data');
         res.render('home', {
             user: req.user,
             blogs: allblogs

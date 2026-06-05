@@ -44,7 +44,13 @@
             </div>
         </div>
         <hr>
-        <img src="<%= blog.coverImgUrl %>" alt="<%= blog.title %>" width="600px" class="img-fluid d-block mx-auto">
+        <img
+            src="/blog/image/<%= blog._id %>"
+            alt="<%= blog.title %>"
+            width="600px"
+            class="img-fluid d-block mx-auto"
+            onerror="this.onerror=null; this.src='/img/default-cover.png';"
+        >
         
         <br><br>
         <div class="container" style="white-space: pre-wrap; align-content: justify;">

@@ -39,10 +39,11 @@
       <div class="mb-3">
         <label class="form-label">Current Image</label><br>
         <img
-          src="<%= blog.coverImgUrl %>"
+          src="/blog/image/<%= blog._id %>"
           alt="Current blog image"
           class="img-fluid mb-2"
           style="max-width: 300px;"
+          onerror="this.onerror=null; this.src='/img/default-cover.png';"
         >
       </div>
 
@@ -53,6 +54,7 @@
           class="form-control"
           id="coverImage"
           name="coverImage"
+          accept="image/*"
         >
       </div>
 
