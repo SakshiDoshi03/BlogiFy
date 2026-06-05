@@ -28,8 +28,13 @@ app.use(express.static(path.resolve('./public')));
 // Connect the Express app to the local MongoDB BlogSite database.
 mongoose
 .connect(process.env.MONGODB_URL)
-.then(() => console.log("Connected to DB"))
-.catch((error) => console.error("MongoDB connection error:", error.message));
+.then(() => {
+    console.log("Connected to MongoDB");
+})
+.catch((err) => {
+    console.error("MongoDB Connection Failed");
+    console.error(err);
+});
 
 // EJS templates from the views folder render the HTML pages.
 app.set("view engine", "ejs");
@@ -37,11 +42,16 @@ app.set('views', path.resolve("./views"));
 
 // Home page route shows all blogs from the database.
 app.get('/', async (req,res) => {
-    const allblogs = await (await blog.find({}));
-    res.render('home', {
-        user: req.user,
-        blogs: allblogs
-    });
+    try {
+        const allblogs = await blog.find({});
+        res.render('home', {
+            user: req.user,
+            blogs: allblogs
+        });
+    } catch (err) {
+        console.error("Home Route Error:", err);
+        res.status(500).send(err.message);
+    }
 });
 
 // User routes handle auth pages; blog routes handle blog creation/details.
