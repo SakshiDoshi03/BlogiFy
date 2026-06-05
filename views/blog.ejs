@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%# Common metadata and Bootstrap CSS are loaded from this partial. %>
+    <%- include('./partials/head') %>
+    <title>blog Page</title>
+</head>
+<body>
+    <%# Navbar uses locals.user to show logged-in or guest links. %>
+    <%- include('./partials/navbar') %>    
+    
+    <div class="container mt-4">
+        <button class="btn btn-outline-primary mb-4" onclick="window.location.href = '/'"><i class="bi bi-arrow-left"></i></button>
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><%= blog.title %></h1>
+
+            <%# The likes array stores user ids, so length is the count and some() checks active state. %>
+            <% const likes = Array.isArray(blog.likes) ? blog.likes : []; %>
+            <% const alreadyLiked = locals.user && likes.some(userId => userId.toString() === locals.user._id.toString()); %>
+            <% if (locals.user && blog.createdBy._id.toString() !== locals.user._id.toString()) { %>
+                <form action="/blog/like/<%= blog._id %>" method="POST">
+                    <button type="submit" class="btn <%= alreadyLiked ? 'btn-danger' : 'btn-outline-danger' %> mb-3">
+                        <i class="bi bi-heart"></i> 
+                    </button>
+                </form>
+            <% } else { %>
+                <span class="btn btn-outline-secondary disabled mb-3">
+                    <i class="bi bi-heart"></i> 
+                </span>
+            <% } %>
+
+        </div>
+        
+        <div class="container mt-3">
+            <%# Use a browser URL for the avatar. Old saved users may still have a Windows path. %>
+            <% const authorImg = blog.createdBy.profileImgUrl && !blog.createdBy.profileImgUrl.includes(':\\') ? blog.createdBy.profileImgUrl : '/img/profileimg.png'; %>
+            <div>
+                <img src="<%= authorImg %>" width="20" height="20" alt="<%= blog.createdBy.fullName %>"> 
+                <p class="d-inline" style="font-size: 11px; font-weight: bold; font-style: italic;"><%= blog.createdBy.fullName %></p>
+                <p class="d-inline" style="font-size: 11px; color: gray;"> - <%= new Date(blog.createdAt).toLocaleDateString(
+                    'en-IN',
+                    { day: '2-digit', month: 'short', year: 'numeric' }
+                ) %></p>
+            </div>
+        </div>
+        <hr>
+        <img src="<%= blog.coverImgUrl %>" alt="<%= blog.title %>" width="600px" class="img-fluid d-block mx-auto">
+        
+        <br><br>
+        <div class="container" style="white-space: pre-wrap; align-content: justify;">
+             <%# The blog body is rendered with preserved line breaks using CSS. %>
+            <p><%= blog.body %></p>
+        </div>
+        
+    </div>
+
+    
+
+    <div class="container mt-3">
+        <h3>Comments (<%= comments.length %>)</h3>
+        <%# Only logged-in users can see the comment form. %>
+        <% if (locals.user) { %>
+            <form action="/blog/comment/<%= blog._id %>" method="POST">
+                <div class="form-group">
+                    <textarea class="form-control mb-3" name="content" placeholder="Write a comment..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Post Comment</button>
+            </form>
+        <% } %>
+    </div>
+    <div class="container mt-4">
+                <%# Render each saved comment with the comment author's profile details. %>
+                <% comments.forEach(comment => { %>
+                    <% const authorImg = comment.createdBy.profileImgUrl && !comment.createdBy.profileImgUrl.includes(':\\') ? comment.createdBy.profileImgUrl : '/img/profileimg.png'; %>
+                    <img src="<%= authorImg %>" width="20" height="20" alt="<%= comment.createdBy.fullName %>"> <%= comment.createdBy.fullName %>
+                    <p><%= comment.content %></p>
+                <% }) %>
+    </div>
+
+    <%# Bootstrap JavaScript is loaded after the content. %>
+    <%- include('./partials/scripts') %>
+</body>
+</html>

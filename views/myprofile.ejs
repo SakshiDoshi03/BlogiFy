@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%# Common metadata and Bootstrap CSS are loaded from this partial. %>
+    <%- include('./partials/head') %>
+    <title>My Profile</title>
+</head>
+<body>
+    <%# Navbar uses locals.user to show logged-in or guest links. %>
+    <%- include('./partials/navbar') %>    
+    
+    <div class="container mt-3 row row-cols-3 justify-content-center">
+        <div class="col-md-6 offset-md-3 mb-5 mt-5 d-flex justify-content-center align-items-center flex-column"
+            style="border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
+            <h2>My Profile</h2>
+            <% if(!locals.user){ %>
+                <p>
+                    You need to be signed in to view your profile. 
+                    <a href="/user/signin" class="btn btn-primary">Sign In</a>
+                </p>
+            <% } else { %>
+                    <% const authorImg = profileUser.profileImgUrl && !profileUser.profileImgUrl.includes(':\\') ? profileUser.profileImgUrl : '/img/profileimg.png'; %>
+                <div class="container mt-4 d-flex flex-column align-items-center">
+                    <img src="<%= authorImg %>" width="70" height="70"  style="border-radius: 50%; border: 2px solid #ccc; margin-bottom: 3px;" alt="<%= profileUser.fullName %>"> 
+                    <p class="d-inline" style="font-size: 11px; font-weight: bold; font-style: italic;"><%= profileUser.fullName %></p> 
+                    
+                    <div class="container mt-4" style="font-size: 14px; ">
+                         <p><strong>Username:</strong> <%= profileUser.fullName %></p>
+                         <p><strong>Email:</strong> <%= profileUser.email %></p>
+                         <p><strong>Role:</strong> <%= profileUser.role %></p>
+                         <p><strong>Joined on:</strong> <%= new Date(profileUser.createdAt).toLocaleDateString() %></p>
+                         
+                         <% if (locals.user && locals.user._id.toString() === profileUser._id.toString()) { %>
+                            <a href="/user/edit/<%= profileUser._id %>" class="btn btn-outline-primary">Edit Profile</a>
+                        <% } %>
+
+                    </div>
+    
+                </div>
+            <% } %>
+        </div>
+        
+    </div>
+         
+        
+
+    
+    <%# Bootstrap JavaScript is loaded after the content. %>
+    <%- include('./partials/scripts') %>
+</body>
+</html>
